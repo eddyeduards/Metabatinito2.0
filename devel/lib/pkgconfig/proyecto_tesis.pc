@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/ros_ws/devel
+
+Name: proyecto_tesis
+Description: Description of proyecto_tesis
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/ubuntu/ros_ws/devel/lib 
+Requires: 

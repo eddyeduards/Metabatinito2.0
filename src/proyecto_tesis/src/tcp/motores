@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+# license removed for brevity
+import rospy
+import socket
+import time
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Pose
+
+global w1, w2, w3, w4
+
+w1 = 1.0
+w2 = 1.0
+w3 = 1.0
+w4 = 1.0
+
+def callback_velocities(data):
+    global w1, w2, w3, w4
+    Vlx = data.linear.x
+    Vly = data.linear.y
+    W = data.angular.z
+
+    lx = 0.225
+    ly = 0.175
+    r = 0.05 
+
+    w1 = 1/r*(Vlx-Vly-(lx+ly)*W)
+    w2 = 1/r*(Vlx+Vly+(lx+ly)*W)
+    w3 = 1/r*(Vlx+Vly-(lx+ly)*W)
+    w4 = 1/r*(Vlx-Vly+(lx+ly)*W)
+
+def inicio():
+    global w1, w2, w3, w4
+    rospy.init_node('motores', anonymous = True)
+
+    velocidad_pub = rospy.Publisher('/velocidades',Twist, queue_size = 6)
+    posicion_pub = rospy.Publisher('/posicion',Pose, queue_size = 6)
+    rospy.Subscriber('/command_velocity', Twist, callback_velocities)
+
+    TCP_IP = "169.254.162.245"
+
+    TCP_PORT1 = 5001
+    TCP_PORT2 = 5002
+    TCP_PORT3 = 5003
+    TCP_PORT4 = 5004
+    TCP_PORT5 = 5005
+    TCP_PORT6 = 5006
+
+    BUFFER_SIZE = 6
+
+    s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s5 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s6 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    s1.bind((TCP_IP, TCP_PORT1))
+    s2.bind((TCP_IP, TCP_PORT2))
+    s3.bind((TCP_IP, TCP_PORT3))
+    s4.bind((TCP_IP, TCP_PORT4))
+    s5.bind((TCP_IP, TCP_PORT5))
+    s6.bind((TCP_IP, TCP_PORT6))
+
+    s1.listen(1)
+    s2.listen(1)
+    s3.listen(1)
+    s4.listen(1)
+    s5.listen(1)
+    s6.listen(1)
+
+    conn1, addr1 = s1.accept()
+    conn2, addr2 = s2.accept()
+    conn3, addr3 = s3.accept()
+    conn4, addr4 = s4.accept()
+    conn5, addr5 = s5.accept()
+    conn6, addr6 = s6.accept()
+
+    vel_msg = Twist()
+    pos_msg = Pose()
+
+    vel_msg.linear.x = 0
+    vel_msg.linear.y = 0
+    vel_msg.angular.z = 0
+
+    pos_msg.position.x = 0
+    pos_msg.position.y = 0
+    pos_msg.orientation.z = 0
+
+    rate = rospy.Rate(100)
+
+    while not rospy.is_shutdown():
+	Vlx = conn1.recv(BUFFER_SIZE)
+	if not Vlx: break
+
+	Vly = conn2.recv(BUFFER_SIZE)
+	if not Vly: break
+
+	Wz = conn3.recv(BUFFER_SIZE)
+	if not Wz: break
+
+	Pos_x = conn4.recv(BUFFER_SIZE)
+	if not Pos_x: break
+
+	Pos_y = conn5.recv(BUFFER_SIZE)
+	if not Pos_y: break
+
+	Pos_ang = conn6.recv(BUFFER_SIZE)
+	if not Pos_ang: break
+
+	if  Vlx == "000.0":
+	    Vlx = 0
+
+	if  Vly == "000.0":
+            Vly = 0
+
+	if  Wz == "000.0":
+            Wz = 0
+
+	if  Pos_x == "000.0":
+            Pos_x = 0
+
+	if  Pos_y == "000.0":
+            Pos_y = 0
+
+	if  Pos_ang == "000.0":
+            Pos_ang = 0
+	
+	conn1.send(str(w1))
+	conn2.send(str(w2))
+	conn3.send(str(w3))
+	conn4.send(str(w4))
+
+
+	Vlx = float(Vlx)
+	Vly = float(Vly)
+	Wz = float(Wz)
+	Pos_x = float(Pos_x)
+	Pos_y = float(Pos_y)
+	Pos_ang = float(Pos_ang)
+
+	print Wz	
+
+	vel_msg.linear.x = Vlx
+	vel_msg.linear.y = Vly
+	vel_msg.angular.z = Wz
+
+	pos_msg.position.x = Pos_x
+	pos_msg.position.y = Pos_y
+	pos_msg.orientation.z = Pos_ang
+
+	velocidad_pub.publish(vel_msg)
+	posicion_pub.publish(pos_msg)
+	#rate.sleep()
+
+    conn1.close()
+    conn2.close()
+    conn3.close()
+    conn4.close()
+    conn5.close()
+    conn6.close()
+
+if __name__ == '__main__':
+    try:
+	inicio()
+    except rospy.ROSInterruptException:
+	pass

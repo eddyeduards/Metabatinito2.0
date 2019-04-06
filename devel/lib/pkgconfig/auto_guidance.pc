@@ -1,0 +1,8 @@
+prefix=/home/ubuntu/ros_ws/devel
+
+Name: auto_guidance
+Description: Description of auto_guidance
+Version: 0.0.0
+Cflags: -I/home/ubuntu/ros_ws/devel/include
+Libs: -L/home/ubuntu/ros_ws/devel/lib 
+Requires: message_runtime
